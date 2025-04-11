@@ -31,5 +31,6 @@ public class Customer extends BaseEntity {
     @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Order> orders;
 
-    private Boolean isDeleted;
+    @Builder.Default
+    private Boolean isDeleted = false;
 }

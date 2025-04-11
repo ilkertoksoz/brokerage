@@ -7,6 +7,9 @@ import java.math.BigDecimal;
 
 public interface AssetService {
 
+    void createInitialTryAsset(Long customerId);
+
+    AssetDTO createAsset(AssetDTO assetDTO);
 
     void processOrder(OrderDTO orderDTO);
 

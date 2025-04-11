@@ -123,7 +123,6 @@ public class AssetValidationHelper {
                 });
     }
 
-    // ========== PRIVATE IMPLEMENTATION METHODS ==========
 
     private void processBuyOrder(OrderDTO orderDTO) {
         BigDecimal requiredAmount = calculateOrderAmount(orderDTO);

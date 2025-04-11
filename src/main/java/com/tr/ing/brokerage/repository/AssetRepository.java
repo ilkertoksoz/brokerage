@@ -8,8 +8,6 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Optional;
 
-import static com.tr.ing.brokerage.constant.Assets.TRY_ASSETS;
-
 @Repository
 public interface AssetRepository extends JpaRepository<Asset, Long> {
 
@@ -19,7 +17,6 @@ public interface AssetRepository extends JpaRepository<Asset, Long> {
     @EntityGraph(attributePaths = {"customer"})
     Optional<Asset> findByCustomerIdAndAssetName(Long customerId, String assetName);
 
-    default Optional<Asset> findTryAssetByCustomerId(Long customerId) {
-        return findByCustomerIdAndAssetName(customerId, TRY_ASSETS);
-    }
+    boolean existsByCustomerIdAndAssetName(Long customerId, String assetName);
+
 }

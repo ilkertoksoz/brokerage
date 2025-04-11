@@ -2,8 +2,14 @@ package com.tr.ing.brokerage.service.impl;
 
 import com.tr.ing.brokerage.dto.AssetDTO;
 import com.tr.ing.brokerage.dto.OrderDTO;
+import com.tr.ing.brokerage.entity.Asset;
+import com.tr.ing.brokerage.entity.Customer;
+import com.tr.ing.brokerage.exception.AssetAlreadyExistException;
+import com.tr.ing.brokerage.exception.CustomerNotFoundException;
 import com.tr.ing.brokerage.exception.InsufficientAssetException;
 import com.tr.ing.brokerage.helper.AssetValidationHelper;
+import com.tr.ing.brokerage.repository.AssetRepository;
+import com.tr.ing.brokerage.repository.CustomerRepository;
 import com.tr.ing.brokerage.service.AssetService;
 import com.tr.ing.brokerage.util.BaseModelMapper;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +19,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 
+import static com.tr.ing.brokerage.constant.Assets.TRY_ASSETS;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -21,6 +29,53 @@ public class AssetServiceImpl implements AssetService {
 
     private final AssetValidationHelper assetValidationHelper;
     private final BaseModelMapper modelMapper;
+    private final AssetRepository assetRepository;
+    private final CustomerRepository customerRepository;
+
+    @Override
+    public void createInitialTryAsset(Long customerId) {
+        if (assetRepository.existsByCustomerIdAndAssetName(customerId, TRY_ASSETS)) {
+            log.warn("TRY asset already exists for customer: {}", customerId);
+            return;
+        }
+
+        Customer customer = customerRepository.findById(customerId)
+                .orElseThrow(() -> new CustomerNotFoundException("Customer not found with id: " + customerId));
+
+        Asset tryAsset = Asset.builder()
+                .customer(customer)
+                .assetName(TRY_ASSETS)
+                .size(BigDecimal.ZERO)
+                .usableSize(BigDecimal.ZERO)
+                .build();
+
+        assetRepository.save(tryAsset);
+        log.info("Created initial TRY asset for customer: {}", customerId);
+    }
+
+    @Override
+    public AssetDTO createAsset(AssetDTO assetDTO) {
+        Customer customer = customerRepository.findById(assetDTO.getCustomerId())
+                .orElseThrow(() -> new CustomerNotFoundException("Customer not found"));
+
+        if (assetRepository.existsByCustomerIdAndAssetName(assetDTO.getCustomerId(), assetDTO.getAssetName())) {
+            throw new AssetAlreadyExistException("Asset already exists for this customer");
+        }
+
+        Asset asset = Asset.builder()
+                .customer(customer)
+                .assetName(assetDTO.getAssetName())
+                .size(assetDTO.getSize())
+                .usableSize(assetDTO.getUsableSize())
+                .build();
+
+        Asset savedAsset = assetRepository.save(asset);
+
+        AssetDTO dto = modelMapper.convertToDto(savedAsset, AssetDTO.class);
+        dto.setCustomerId(savedAsset.getCustomer().getId());
+        return dto;
+    }
+
 
     @Override
     public void processOrder(OrderDTO orderDTO) {
@@ -68,14 +123,14 @@ public class AssetServiceImpl implements AssetService {
     public AssetDTO getTryBalance(Long customerId) {
         try {
             log.debug("Fetching TRY balance for customer [ID: {}]", customerId);
-            AssetDTO balance = modelMapper.convertToDto(
-                    assetValidationHelper.getTryAssetEntity(customerId), AssetDTO.class);
+            Asset asset = assetValidationHelper.getTryAssetEntity(customerId);
+            AssetDTO balance = modelMapper.convertToDto(asset, AssetDTO.class);
+            balance.setCustomerId(asset.getCustomer().getId());
             log.debug("Retrieved TRY balance for customer [ID: {}]: {}",
                     customerId, balance.getUsableSize());
             return balance;
         } catch (Exception e) {
-            log.error("Failed to get TRY balance for customer [ID: {}]: {}",
-                    customerId, e.getMessage());
+            log.error("Failed to get TRY balance for customer [ID: {}]: {}", customerId, e.getMessage());
             throw e;
         }
     }

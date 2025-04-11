@@ -28,7 +28,9 @@ public class CustomerServiceImpl implements CustomerService {
     @Override
     @Transactional
     public CustomerDTO createCustomer(CustomerDTO customerDTO) {
+
         if (customerRepository.existsByCustomerId(customerDTO.getCustomerId())) {
+
             throw new CustomerAlreadyExistException("Customer already exists: " + customerDTO.getCustomerId());
         }
 
@@ -78,25 +80,27 @@ public class CustomerServiceImpl implements CustomerService {
     @Override
     @Transactional
     public CustomerDTO updateCustomer(Long id, CustomerDTO customerDTO) {
-
-        log.debug("Updating customer with ID {}", id);
+        log.debug("Attempting to update customer with ID: {}", id);
 
         Customer existingCustomer = customerRepository.findById(id)
-                .orElseThrow(() -> new CustomerNotFoundException("Customer to update not found - ID: " + id));
-
-        log.debug("Update failed - customer ID {} not found", id);
+                .orElseThrow(() -> {
+                    log.error("Customer not found with ID: {}", id);
+                    return new CustomerNotFoundException("Customer not found - ID: " + id);
+                });
 
         if (!existingCustomer.getCustomerId().equals(customerDTO.getCustomerId())) {
 
-            log.debug("Update rejected - customer ID change attempted for customer {}", id);
+            log.warn("Customer ID change attempt detected for customer: {}", id);
 
             throw new CustomerValidationException("Customer ID cannot be changed");
         }
 
-        log.debug("Successfully updated customer {}", id);
+        existingCustomer.setName(customerDTO.getName());
+        existingCustomer.setIsDeleted(customerDTO.getIsDeleted());
 
-        modelMapper.mapDtoToEntity(customerDTO, existingCustomer);
-        return modelMapper.convertToDto(customerRepository.save(existingCustomer), CustomerDTO.class);
+        log.debug("Customer with ID: {} updated successfully", id);
+
+        return modelMapper.convertToDto(existingCustomer, CustomerDTO.class);
     }
 
     @Override

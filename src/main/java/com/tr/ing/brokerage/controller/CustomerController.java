@@ -24,6 +24,7 @@ public class CustomerController implements CustomerAPI {
 
     @Override
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<CustomerDTO> createCustomer(@RequestBody CustomerDTO customerDTO) {
         log.debug("Creating customer: {}", customerDTO);
         return ResponseEntity.status(HttpStatus.CREATED)

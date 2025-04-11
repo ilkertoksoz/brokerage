@@ -5,6 +5,7 @@ import com.tr.ing.brokerage.dto.AssetDTO;
 import com.tr.ing.brokerage.service.AssetService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -20,6 +21,28 @@ import static com.tr.ing.brokerage.constant.AppConstants.API_BASE_PATH;
 public class AssetController implements AssetAPI {
 
     private final AssetService assetService;
+
+    @Override
+    @PostMapping("/initialize-try")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> initializeTryAsset(@PathVariable Long customerId) {
+        log.debug("Initializing TRY asset for customer ID: {}", customerId);
+        assetService.createInitialTryAsset(customerId);
+        log.info("Successfully initialized TRY asset for customer ID: {}", customerId);
+        return ResponseEntity.ok().build();
+    }
+
+    @Override
+    @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<AssetDTO> createAsset(@PathVariable Long customerId,
+                                                @RequestBody AssetDTO assetDTO) {
+        log.debug("Creating new asset for customer ID: {}", customerId);
+        assetDTO.setCustomerId(customerId);
+        AssetDTO createdAsset = assetService.createAsset(assetDTO);
+        log.info("Successfully created asset {} for customer ID: {}", createdAsset.getAssetName(), customerId);
+        return ResponseEntity.status(HttpStatus.CREATED).body(createdAsset);
+    }
 
     @Override
     @GetMapping("/try-balance")
